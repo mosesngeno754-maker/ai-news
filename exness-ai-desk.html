@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scalp Desk – AI Forex Analyzer for Exness</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d1218;--panel:#151c25;--line:#243040;--tx:#e6edf5;--mut:#8697ab;--acc:#ffd23f;--buy:#2ecf8f;--sell:#ff5d6c;color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme=dark]){--bg:#f3f5f8;--panel:#fff;--line:#d6dde6;--tx:#17202b;--mut:#5b6b7e;--acc:#b88700;--buy:#0f9d68;--sell:#d6283a;color-scheme:light}}
+:root[data-theme=dark]{--bg:#0d1218;--panel:#151c25;--line:#243040;--tx:#e6edf5;--mut:#8697ab;--acc:#ffd23f;--buy:#2ecf8f;--sell:#ff5d6c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 'Space Grotesk',system-ui,sans-serif;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+label{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+.btn{background:var(--acc);color:#111;border:0;border-radius:6px;padding:10px 16px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--line)}
+.btn.buy{background:var(--buy)}.btn.sell{background:var(--sell);color:#fff}
+.mono{font-family:'IBM Plex Mono',monospace}
+#login{display:grid;place-items:center;min-height:100vh;padding:20px}
+.box{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:28px}
+.box h1{margin:0 0 4px;font-size:26px}.box p{color:var(--mut);margin:0 0 8px}
+.err{color:var(--sell);min-height:20px;font-size:13px;margin-top:8px}
+#app{display:none}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+header b{font-size:18px}header .sp{flex:1}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 16px;border-bottom:1px solid var(--line)}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 14px;color:var(--mut);cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--tx);border-color:var(--acc)}
+main{padding:16px;max-width:1300px;margin:auto}
+.tab{display:none}.tab.on{display:block}
+.grid{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card h2{margin:0 0 8px;font-size:17px}
+.tv{height:560px}.tv.s{height:520px}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.out{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:12px;margin-top:12px;min-height:60px}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-weight:700;font-size:13px}
+.pill.b{background:var(--buy);color:#06251a}.pill.s{background:var(--sell);color:#fff}.pill.n{background:var(--line)}
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat div{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
+.stat small{color:var(--mut);display:block}.stat b{font-size:17px}
+.note{font-size:12px;color:var(--mut);margin-top:10px}
+</style>
+</head>
+<body>
+
+<section id="login">
+  <form class="box" id="lf" autocomplete="on" onsubmit="return false">
+    <h1>⚡ Scalp Desk</h1>
+    <p id="lmode">Sign in to your trading desk</p>
+    <label for="em">Email</label>
+    <input id="em" type="email" autocomplete="username" placeholder="you@example.com" required>
+    <label for="pw">Password (6+ characters)</label>
+    <input id="pw" type="password" autocomplete="current-password" minlength="6" required>
+    <div id="pw2w" style="display:none"><label for="pw2">Confirm password</label><input id="pw2" type="password" autocomplete="new-password"></div>
+    <div class="err" id="err" role="alert"></div>
+    <button class="btn" id="go" style="width:100%;margin-top:6px">Sign in</button>
+    <button class="btn ghost" id="sw" type="button" style="width:100%;margin-top:8px">Create account</button>
+  </form>
+</section>
+
+<div id="app">
+  <header>
+    <b>⚡ Scalp Desk</b><span class="mono" id="clock"></span><span class="sp"></span>
+    <span id="who" style="color:var(--mut)"></span>
+    <button class="btn ghost" id="out">Sign out</button>
+  </header>
+  <nav id="nav">
+    <button data-t="chart" class="on">Chart</button>
+    <button data-t="cal">Calendar</button>
+    <button data-t="news">News + AI</button>
+    <button data-t="scalp">Scalp ticket</button>
+    <button data-t="set">AI settings</button>
+  </nav>
+  <main>
+    <div class="tab on" id="t-chart"><div class="card">
+      <div class="row" style="max-width:360px;margin-bottom:10px"><select id="sym">
+        <option value="OANDA:XAUUSD">XAUUSD – Gold</option><option value="FX:EURUSD">EURUSD</option><option value="FX:GBPUSD">GBPUSD</option>
+        <option value="FX:USDJPY">USDJPY</option><option value="FX:GBPJPY">GBPJPY</option><option value="FX:AUDUSD">AUDUSD</option><option value="FX:USDCAD">USDCAD</option><option value="OANDA:BTCUSD">BTCUSD</option></select></div>
+      <div class="tv" id="w-chart"></div></div></div>
+
+    <div class="tab" id="t-cal"><div class="grid">
+      <div class="card"><h2>Economic calendar</h2><div class="tv s" id="w-cal"></div></div>
+      <div class="card"><h2>AI calendar read</h2>
+        <label for="calin">Paste upcoming events (name, forecast, previous, actual)</label>
+        <textarea id="calin" rows="8" placeholder="US NFP – forecast 180K, previous 150K, actual 240K&#10;ECB rate decision – forecast 3.25%, previous 3.50%"></textarea>
+        <button class="btn" style="margin-top:10px" onclick="analyze('cal')">Analyze impact</button>
+        <div class="out" id="o-cal">Result appears here.</div></div></div></div>
+
+    <div class="tab" id="t-news"><div class="grid">
+      <div class="card"><h2>Live forex news</h2><div class="tv s" id="w-news"></div></div>
+      <div class="card"><h2>AI news analyzer</h2>
+        <label for="newsin">Paste headlines or an article</label>
+        <textarea id="newsin" rows="8" placeholder="Fed signals fewer cuts as inflation stays sticky…"></textarea>
+        <label for="newspair">Pair</label>
+        <select id="newspair"><option>XAUUSD</option><option>EURUSD</option><option>GBPUSD</option><option>USDJPY</option><option>GBPJPY</option></select>
+        <button class="btn" style="margin-top:10px" onclick="analyze('news')">Analyze news</button>
+        <div class="out" id="o-news">Result appears here.</div></div></div></div>
+
+    <div class="tab" id="t-scalp"><div class="grid">
+      <div class="card"><h2>Scalp ticket</h2>
+        <div class="row"><div><label>Pair</label><select id="sp"></select></div><div><label>Side</label><select id="sd"><option>BUY</option><option>SELL</option></select></div></div>
+        <div class="row"><div><label>Balance ($)</label><input id="bal" type="number" value="1000"></div><div><label>Risk %</label><input id="rk" type="number" value="1" step="0.1"></div></div>
+        <div class="row"><div><label>Entry</label><input id="en" type="number" step="any"></div><div><label>Stop (pips)</label><input id="sl" type="number" value="8"></div></div>
+        <div class="row"><div><label>Reward : Risk</label><input id="rr" type="number" value="1.5" step="0.1"></div><div><label>Spread (pips)</label><input id="spr" type="number" value="0.2" step="0.1"></div></div>
+        <button class="btn" style="margin-top:14px" onclick="calc()">Calculate</button>
+        <div class="stat" id="st"></div>
+        <p class="note">Pip values are approximate (JPY pairs use ~USDJPY 150). Check the exact value in your Exness terminal before trading.</p></div>
+      <div class="card"><h2>Execute</h2>
+        <div class="out mono" id="tk">Calculate a ticket first.</div>
+        <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="copyT()">Copy ticket</button>
+        <button class="btn buy" onclick="window.open('https://my.exness.com','_blank','noopener')">Open Exness</button></div>
+        <h2 style="margin-top:18px">AI scalp bias</h2>
+        <button class="btn" onclick="analyze('scalp')">Get AI bias for this pair</button>
+        <div class="out" id="o-scalp">Result appears here.</div>
+        <p class="note">Exness has no public retail order API for browser pages, so orders are placed in the Exness terminal. For automation use an MT5 Expert Advisor.</p></div></div></div>
+
+    <div class="tab" id="t-set"><div class="card" style="max-width:640px"><h2>AI provider</h2>
+      <p class="note">Works with any OpenAI-compatible endpoint. Leave blank to use the built-in keyword engine. The key is saved in this browser only; for a public site, point the endpoint at your own proxy instead of a raw key.</p>
+      <label>Endpoint</label><input id="ep" placeholder="https://api.openai.com/v1/chat/completions">
+      <label>Model</label><input id="md" placeholder="gpt-4o-mini">
+      <label>API key</label><input id="ak" type="password" autocomplete="off">
+      <button class="btn" style="margin-top:14px" onclick="saveS()">Save</button> <span id="sv" class="note"></span></div></div>
+
+    <p class="note">Trading leveraged products carries high risk. Analysis here is informational, not financial advice. Not affiliated with Exness.</p>
+  </main>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+async function hash(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('scalpdesk:'+s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return 'x'+h}}
+let reg=false;
+$('sw').onclick=()=>{reg=!reg;$('pw2w').style.display=reg?'block':'none';$('go').textContent=reg?'Create account':'Sign in';$('sw').textContent=reg?'Back to sign in':'Create account';$('lmode').textContent=reg?'Create your desk login':'Sign in to your trading desk';$('err').textContent=''};
+$('lf').addEventListener('submit',async()=>{
+  const e=$('em').value.trim().toLowerCase(),p=$('pw').value,er=$('err');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return er.textContent='Enter a valid email address.';
+  if(p.length<6)return er.textContent='Password must be at least 6 characters.';
+  const users=JSON.parse(store.get('sd_users')||'{}'),h=await hash(e+p);
+  if(reg){
+    if(p!==$('pw2').value)return er.textContent='Passwords do not match.';
+    if(users[e])return er.textContent='This email is already registered. Sign in instead.';
+    users[e]=h;store.set('sd_users',JSON.stringify(users));
+  }else if(!users[e]||users[e]!==h)return er.textContent='Wrong email or password.';
+  try{sessionStorage.setItem('sd_s',e)}catch(x){}
+  enter(e);
+});
+function enter(e){$('login').style.display='none';$('app').style.display='block';$('who').textContent=e;
+  $('ep').value=store.get('sd_ep')||'';$('md').value=store.get('sd_md')||'';$('ak').value=store.get('sd_ak')||'';chart();loadW();}
+$('out').onclick=()=>{try{sessionStorage.removeItem('sd_s')}catch(e){}location.reload()};
+try{const s=sessionStorage.getItem('sd_s');if(s)enter(s)}catch(e){}
+setInterval(()=>{$('clock').textContent=new Date().toUTCString().slice(17,25)+' UTC'},1000);
+
+$('nav').onclick=e=>{const t=e.target.dataset.t;if(!t)return;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b===e.target));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+t));};
+
+const dark=()=>!window.matchMedia('(prefers-color-scheme:light)').matches||document.documentElement.dataset.theme==='dark';
+function tv(id,file,cfg){const el=$(id);el.innerHTML='';const w=document.createElement('div');w.className='tradingview-widget-container';w.style.cssText='height:100%;width:100%';
+  const i=document.createElement('div');i.className='tradingview-widget-container__widget';i.style.cssText='height:100%;width:100%';w.appendChild(i);
+  const s=document.createElement('script');s.src='https://s3.tradingview.com/external-embedding/'+file;s.async=true;
+  s.text=JSON.stringify(Object.assign({autosize:true,width:'100%',height:'100%',colorTheme:dark()?'dark':'light'},cfg));w.appendChild(s);el.appendChild(w);}
+function chart(){tv('w-chart','embed-widget-advanced-chart.js',{symbol:$('sym').value,interval:'5',timezone:'Etc/UTC',theme:dark()?'dark':'light',style:'1',locale:'en',allow_symbol_change:true,studies:['STD;EMA','STD;RSI']});}
+$('sym').onchange=chart;
+function loadW(){tv('w-cal','embed-widget-events.js',{importanceFilter:'0,1',currencyFilter:'USD,EUR,GBP,JPY,AUD,CAD,CHF,NZD',locale:'en'});
+  tv('w-news','embed-widget-timeline.js',{feedMode:'market',market:'forex',displayMode:'regular',locale:'en'});}
+
+// Scalp calculator
+const PAIRS={XAUUSD:{pip:.1,pv:10},EURUSD:{pip:1e-4,pv:10},GBPUSD:{pip:1e-4,pv:10},AUDUSD:{pip:1e-4,pv:10},USDJPY:{pip:.01,pv:6.7},GBPJPY:{pip:.01,pv:6.7},USDCAD:{pip:1e-4,pv:7.3},BTCUSD:{pip:1,pv:1}};
+$('sp').innerHTML=Object.keys(PAIRS).map(k=>`<option>${k}</option>`).join('');
+let ticket='';
+function calc(){const p=$('sp').value,c=PAIRS[p],side=$('sd').value,bal=+$('bal').value,rk=+$('rk').value,sl=+$('sl').value,rr=+$('rr').value,spr=+$('spr').value,en=+$('en').value;
+  if(!(bal>0&&rk>0&&sl>0))return $('tk').textContent='Enter balance, risk % and stop pips.';
+  const risk=bal*rk/100,lots=Math.max(0.01,Math.floor(risk/((sl+spr)*c.pv)*100)/100),tp=sl*rr,dir=side==='BUY'?1:-1,d=p.includes('JPY')?3:p==='XAUUSD'?2:5;
+  const slP=en?(en-dir*sl*c.pip).toFixed(d):'–',tpP=en?(en+dir*tp*c.pip).toFixed(d):'–';
+  $('st').innerHTML=[['Lots',lots.toFixed(2)],['Risk $',risk.toFixed(2)],['Reward $',(lots*tp*c.pv).toFixed(2)],['Stop',slP],['Target',tpP],['Target pips',tp.toFixed(1)]].map(x=>`<div><small>${x[0]}</small><b class="mono">${x[1]}</b></div>`).join('');
+  ticket=`${side} ${p}\nLots: ${lots.toFixed(2)}\nEntry: ${en||'market'}\nSL: ${slP} (${sl} pips)\nTP: ${tpP} (${tp.toFixed(1)} pips)\nRisk: $${risk.toFixed(2)} (${rk}%)`;
+  $('tk').textContent=ticket;}
+function copyT(){if(!ticket)return;try{navigator.clipboard.writeText(ticket)}catch(e){}}
+
+// AI + fallback engine
+const POS=['hawkish','hike','beat','strong','surge','rally','upbeat','hot','above','higher','robust','rises','growth'],NEG=['dovish','cut','miss','weak','plunge','slump','cool','below','lower','recession','falls','crisis','drop','contraction'];
+function localRead(txt,pair,kind){const t=txt.toLowerCase();let p=0,n=0;POS.forEach(w=>p+=(t.split(w).length-1));NEG.forEach(w=>n+=(t.split(w).length-1));
+  const base=pair?pair.slice(0,3):'USD',sc=p-n,usd=/\b(fed|usd|dollar|nfp|cpi|fomc|us )/.test(t),bias=sc>0?'bullish':sc<0?'bearish':'neutral';
+  let r=`Keyword engine (no AI key set)\nTone: ${bias} (+${p} / -${n})\n`;
+  if(pair==='XAUUSD'||!pair)r+=usd?`USD-driven news: stronger-than-expected data usually pressures gold; weaker data supports it.\n`:'';
+  r+=`Scalp view: ${sc>1?'favour buys on pullbacks':sc<-1?'favour sells on rallies':'stay flat until direction clears'}.\nWait 1–2 minutes after the release; spreads and slippage spike at high-impact events. Add an AI key in Settings for deeper analysis.`;return r;}
+async function analyze(kind){
+  const out=$('o-'+kind),ep=store.get('sd_ep'),key=store.get('sd_ak'),md=store.get('sd_md')||'gpt-4o-mini';
+  const pair=kind==='news'?$('newspair').value:kind==='scalp'?$('sp').value:'';
+  const txt=kind==='cal'?$('calin').value:kind==='news'?$('newsin').value:`Ticket:\n${ticket||'none'}`;
+  if(kind!=='scalp'&&!txt.trim())return out.textContent='Paste some text first.';
+  if(!ep||!key)return out.textContent=localRead(txt,pair,kind);
+  out.textContent='Analyzing…';
+  const sys='You are a professional forex scalping analyst for Exness traders. Be concise. Give: 1) directional bias per affected pair with confidence %, 2) key levels or conditions to watch, 3) timing advice around the event (spread/slippage), 4) risk warning. Never guarantee outcomes.';
+  const usr={cal:'Analyze these economic calendar events for scalping impact:\n',news:`Analyze this news for ${pair} scalping:\n`,scalp:`Give a short scalp bias for ${pair} for the next 1–4 hours given this trade idea and current macro context:\n`}[kind]+txt;
+  try{const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:md,messages:[{role:'system',content:sys},{role:'user',content:usr}],temperature:.3})});
+    if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();out.textContent=d.choices?.[0]?.message?.content||'Empty response.';
+  }catch(e){out.textContent='AI request failed ('+e.message+'). Check endpoint, key and CORS.\n\n'+localRead(txt,pair,kind);}}
+function saveS(){store.set('sd_ep',$('ep').value.trim());store.set('sd_md',$('md').value.trim());store.set('sd_ak',$('ak').value.trim());$('sv').textContent='Saved.'}
+</script>
+</body>
+</html>
